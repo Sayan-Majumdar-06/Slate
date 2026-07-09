@@ -10,8 +10,8 @@ const Join = () => {
     const form = e.target;
     const formData = new FormData(form);
     const username = formData.get("username");
-    const code = formData.get("link");
-    navigate(`/room/${code}`, { state: { username: username } });
+    const roomId = formData.get("link");
+    navigate(`/room/${roomId}`, { state: { username: username } });
   }
 
   return (

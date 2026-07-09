@@ -30,6 +30,17 @@ const io = new Server(server, {
   },
 });
 
+interface RoomState {
+    problem: string;
+    code: string;
+    notes: string;
+    whiteboard: {
+        elements: []
+    };
+}
+
+const rooms = new Map<string, RoomState>();
+
 async function getOnlineUserIds(io: Server, roomId: string) {
   const sockets = await io.in(roomId).fetchSockets();
   const users = sockets.map(s => s.data.username).filter(Boolean);
@@ -37,37 +48,85 @@ async function getOnlineUserIds(io: Server, roomId: string) {
   io.to(roomId).emit("user_list_updated", users);
 }
 
-io.on("connection", async (socket) => {
-    const { id, username } = socket.handshake.auth; 
+const getRoom = (roomId: string) => {
+    const room = rooms.get(roomId);
 
-    if (!id || !username) {
+    if(!room) {
+        throw new Error(`Room ${roomId} doesn't exist`);
+    }
+
+    return room;
+}
+
+io.on("connection", async (socket) => {
+    const { roomId, username } = socket.handshake.auth; 
+
+    if (!roomId || !username) {
         return socket.disconnect();
     }
 
     socket.data.username = username;
-    socket.data.id = id;    
+    socket.data.roomId = roomId;    
 
     socket.on("join-room", async (roomId: string) => {
         socket.join(roomId);
 
-        console.log(`${socket.id} joined ${roomId}`);
+        // console.log(`${socket.id} joined ${roomId}`);
 
-        socket.to(roomId).emit("user-joined", socket.id);
+        if(!rooms.has(roomId)) {
+            rooms.set(roomId, {
+                problem: "",
+                code: "",
+                notes: "",
+                whiteboard: {
+                    elements: [],
+                }
+            });
+        }
 
+        const room = getRoom(roomId);
+
+        socket.emit("room-state", room);
         await getOnlineUserIds(io, roomId);
     });
 
     socket.on('code-changed', ({roomId, code}) => {
+        const room = getRoom(roomId);
+
+        room.code = code;
+
         socket.to(roomId).emit('code-changed', code);
     });
 
     socket.on('problem-updated', ({roomId, problem}) => {
+        const room = getRoom(roomId);
+
+        room.problem = problem;
+
         socket.to(roomId).emit('problem-updated', problem);
     });
 
+    socket.on('notes-updated', ({roomId, notes}) => {
+        const room = getRoom(roomId);
+
+        room.notes = notes;
+
+        socket.to(roomId).emit('notes-updated', notes);
+    });
+
+    socket.on("whiteboard-updated", ({roomId, elements}) => {
+        const room = getRoom(roomId);
+
+        room.whiteboard = {
+            elements: elements
+        };
+
+        socket.to(roomId).emit("whiteboard-updated", room.whiteboard);
+    });
+
     socket.on("disconnect", async () => {
-        console.log(`${socket.id} disconnected`);
-        const targetRoom = socket.data.id;
+        // console.log(`${socket.id} disconnected`);
+        const targetRoom = socket.data.roomId;
         
         if (targetRoom) {
             await getOnlineUserIds(io, targetRoom);

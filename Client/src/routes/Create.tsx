@@ -5,12 +5,12 @@ const Create = () => {
   const navigate = useNavigate();
   const params = useParams();
 
-  const { id } = params;
+  const { roomId } = params;
   const username = "ADMIN";
 
   const joinRoom = () => {
-    if (!id) return;
-    navigate(`/room/${id}`, { state: { username: username } });
+    if (!roomId) return;
+    navigate(`/room/${roomId}`, { state: { username: username } });
   }
   
   return (
@@ -18,7 +18,7 @@ const Create = () => {
       <div className="w-[400px] h-[300px] p-8 border rounded-xl flex flex-col items-center justify-around">
         <div>
             <h3>Room ID:</h3>
-            <h2>{id}</h2>
+            <h2>{roomId}</h2>
         </div>
         <button className="border-2 p-2 rounded-lg" onClick={joinRoom}>Enter Room</button>
       </div>

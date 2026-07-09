@@ -5,27 +5,26 @@ import { useParams } from 'react-router';
 import { socket } from '../socket/socket';
 import { useLocation } from 'react-router';
 import { Excalidraw } from "@excalidraw/excalidraw";
+import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import AddProblemModal from '../Components/AddProblemModal';
 import "@excalidraw/excalidraw/index.css";
 const Room = () => {
 
     const params = useParams();
-
-    const { id } = params;
-
+    const { roomId } = params;
     const location = useLocation();
     const username = location.state?.username || "Anonymous";
-
     const [users, setUsers] = useState<string[]>([]);
-
     const [code, setCode] = useState("// code here");
-
     const delayRef = useRef<number | null>(null);
+    const whiteboardDelayRef = useRef<number | null>(null);
 
     const [isAddProblemOpen, setIsAddProblemOpen] = useState(false);
-
     const [problem, setProblem] = useState("Problem statement goes here");
     const [notes, setNotes] = useState("Notes");
+
+    const [excalidrawAPI, setExcalidrawAPI] =
+    useState<ExcalidrawImperativeAPI | null>(null);
 
     const onCodeChange = (value: string) => {
         const newCode = value ?? "";
@@ -37,9 +36,31 @@ const Room = () => {
         }
 
         delayRef.current = window.setTimeout(() => socket.emit('code-changed', {
-            roomId: id,
+            roomId: roomId,
             code: newCode
         }), 50);       
+    }
+
+    const onProblemUpdated = (value: string) => {
+        const newProblem = value ?? "";
+
+        setProblem(newProblem);
+
+        socket.emit('problem-updated', {
+            roomId: roomId,
+            problem: newProblem
+        });       
+    }
+
+    const onNotesUpdated = (value: string) => {
+        const newNotes = value ?? "";
+
+        setNotes(newNotes);
+
+        socket.emit('notes-updated', {
+            roomId: roomId,
+            notes: newNotes
+        });       
     }
 
     useEffect(() => {
@@ -61,15 +82,41 @@ const Room = () => {
         socket.off('problem-updated');
       }
     }, [])
+
+    useEffect(() => {
+      socket.on('whiteboard-updated', (scene) => {
+        excalidrawAPI?.updateScene(scene);
+      })
+    
+      return () => {
+        socket.off('whiteboard-updated');
+      }
+    }, [excalidrawAPI])
+
+    useEffect(() => {
+      socket.on('notes-updated', (notes) => {
+        setNotes(notes);
+      })
+    
+      return () => {
+        socket.off('notes-updated');
+      }
+    }, [])
     
     useEffect(() => {
-        socket.auth = { id, username };
+        socket.auth = { roomId, username };
         socket.connect();
 
         socket.on("connect", () => {
-            console.log("Connected: ", socket.id);
-            socket.emit("join-room", id);
+            // console.log("Connected: ", socket.roomId);
+            socket.emit("join-room", roomId);
         });
+
+        socket.on("room-state", (room) => {
+            setCode(room.code);
+            setProblem(room.problem);
+            setNotes(room.notes);
+        })
 
         socket.on("user_list_updated", (userList: string[]) => {
             console.log("Received users:", userList);
@@ -81,7 +128,7 @@ const Room = () => {
             socket.off("user_list_updated");
             socket.disconnect();
         };
-    }, [id, username]);
+    }, [roomId, username]);
 
     const isInterviewer = (username == "ADMIN");
 
@@ -89,7 +136,7 @@ const Room = () => {
   return (
     <div className="w-screen h-screen flex flex-col">
         
-        <AddProblemModal roomId={id} open={isAddProblemOpen} onClose={()=>setIsAddProblemOpen(false)} onSave={(p) => setProblem(p)}/>
+        <AddProblemModal roomId={roomId} open={isAddProblemOpen} onClose={()=>setIsAddProblemOpen(false)} onSave={(p) => setProblem(p)}/>
 
         <header className='py-3 px-8 flex justify-between border-2'>
             <div className='flex gap-4'>
@@ -116,8 +163,9 @@ const Room = () => {
             {/* Left */}
             <Panel maxSize='40%' minSize='20%'>
                 <Group className='h-full flex flex-col' orientation='vertical'>
-                    <Panel className='w-full h-full whitespace-pre-wrap p-4'>
-                        {problem}
+                    <Panel className='w-full h-full p-4'>
+                        <textarea className='w-full h-full whitespace-pre-wrap' value={problem} onChange={(e) => onProblemUpdated(e.target.value)} disabled>
+                        </textarea>
                     </Panel>
 
                     {isInterviewer &&  
@@ -125,7 +173,7 @@ const Room = () => {
                         <Separator className="h-1 bg-zinc-700 hover:bg-blue-500" />
 
                         <Panel maxSize='70%' minSize='20%' className='w-full h-full relative'>
-                            <textarea className='inset-4 absolute resize-none outline-none text-sm font-mono' value={notes} onChange={(e)=>setNotes(e.target.value)}></textarea>
+                            <textarea className='inset-4 absolute resize-none outline-none text-sm font-mono' value={notes} onChange={(e) => onNotesUpdated(e.target.value)}></textarea>
                         </Panel>
                     </>}
                 </Group>
@@ -142,8 +190,18 @@ const Room = () => {
 
                     <Separator className="h-1 bg-zinc-700 hover:bg-blue-500" />
 
-                    <Panel maxSize='70%' minSize='20%' classname='h-full w-full'>
-                        <Excalidraw/>                        
+                    <Panel maxSize='70%' minSize='20%' className='h-full w-full'>
+                        <Excalidraw onChange={(elements) => {
+                            if(whiteboardDelayRef.current) {
+                                clearTimeout(whiteboardDelayRef.current);
+                            }
+
+                            whiteboardDelayRef.current = window.setTimeout(()=>socket.emit("whiteboard-updated", {
+                                roomId: roomId,
+                                elements
+                            }),500);
+                            
+                        }} excalidrawAPI={(api) => setExcalidrawAPI(api)}/>                        
                     </Panel>
                 </Group>
             </Panel>
