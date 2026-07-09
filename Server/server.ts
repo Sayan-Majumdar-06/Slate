@@ -52,7 +52,7 @@ const getRoom = (roomId: string) => {
     const room = rooms.get(roomId);
 
     if(!room) {
-        throw new Error(`Room ${roomId} doesn't exist`);
+        return;
     }
 
     return room;
@@ -92,6 +92,9 @@ io.on("connection", async (socket) => {
 
     socket.on('code-changed', ({roomId, code}) => {
         const room = getRoom(roomId);
+        if(!room) {
+            return;
+        }
 
         room.code = code;
 
@@ -101,6 +104,10 @@ io.on("connection", async (socket) => {
     socket.on('problem-updated', ({roomId, problem}) => {
         const room = getRoom(roomId);
 
+        if(!room) {
+            return;
+        }
+
         room.problem = problem;
 
         socket.to(roomId).emit('problem-updated', problem);
@@ -109,13 +116,22 @@ io.on("connection", async (socket) => {
     socket.on('notes-updated', ({roomId, notes}) => {
         const room = getRoom(roomId);
 
+        if(!room) {
+            return;
+        }
+
         room.notes = notes;
 
         socket.to(roomId).emit('notes-updated', notes);
     });
 
     socket.on("whiteboard-updated", ({roomId, elements}) => {
+        console.log("whiteboard update for", roomId);
         const room = getRoom(roomId);
+
+        if(!room) {
+            return;
+        }
 
         room.whiteboard = {
             elements: elements
@@ -124,11 +140,22 @@ io.on("connection", async (socket) => {
         socket.to(roomId).emit("whiteboard-updated", room.whiteboard);
     });
 
+    socket.on("end-room", ({roomId}) => {
+        console.log("Received end-room:", roomId);
+        io.to(roomId).emit("end-room");
+
+        rooms.delete(roomId);
+    });
+
     socket.on("disconnect", async () => {
         // console.log(`${socket.id} disconnected`);
         const targetRoom = socket.data.roomId;
+
+        if(!targetRoom) return;
+
+        if(!rooms.has(targetRoom)) return;
         
-        if (targetRoom) {
+        if(targetRoom) {
             await getOnlineUserIds(io, targetRoom);
         }
     });

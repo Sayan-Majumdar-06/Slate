@@ -8,8 +8,12 @@ import { Excalidraw } from "@excalidraw/excalidraw";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import AddProblemModal from '../Components/AddProblemModal';
 import "@excalidraw/excalidraw/index.css";
+import EndRoomDialog from '../Components/EndRoomDialog';
+import { useNavigate } from 'react-router';
+
 const Room = () => {
 
+    const navigate = useNavigate();
     const params = useParams();
     const { roomId } = params;
     const location = useLocation();
@@ -20,6 +24,7 @@ const Room = () => {
     const whiteboardDelayRef = useRef<number | null>(null);
 
     const [isAddProblemOpen, setIsAddProblemOpen] = useState(false);
+    const [isEndDialogOpen, setIsEndDialogOpen] = useState(false);
     const [problem, setProblem] = useState("Problem statement goes here");
     const [notes, setNotes] = useState("Notes");
 
@@ -102,6 +107,19 @@ const Room = () => {
         socket.off('notes-updated');
       }
     }, [])
+
+    useEffect(() => {
+      socket.on('end-room', (roomId) => {
+        alert("Room has ended !");
+
+        navigate('/');
+        socket.disconnect();
+      })
+    
+      return () => {
+        socket.off('end-room');
+      }
+    }, [])
     
     useEffect(() => {
         socket.auth = { roomId, username };
@@ -138,6 +156,8 @@ const Room = () => {
         
         <AddProblemModal roomId={roomId} open={isAddProblemOpen} onClose={()=>setIsAddProblemOpen(false)} onSave={(p) => setProblem(p)}/>
 
+        <EndRoomDialog roomId={roomId} open={isEndDialogOpen} onClose={()=>setIsEndDialogOpen(false)}/>
+
         <header className='py-3 px-8 flex justify-between border-2'>
             <div className='flex gap-4'>
                 {
@@ -154,7 +174,7 @@ const Room = () => {
             {isInterviewer && <ul className='flex gap-3'>
                 <li><button className='border p-1 cursor-pointer' onClick={()=>setIsAddProblemOpen(true)}>Add problem</button></li>
                 <li><button className='border p-1'>Save data</button></li>
-                <li><button className='border p-1'>End room</button></li>
+                <li><button className='border p-1 cursor-pointer' onClick={()=>setIsEndDialogOpen(true)}>End room</button></li>
                 <li><button className='border p-1'>Settings</button></li>
             </ul>}
         </header>
