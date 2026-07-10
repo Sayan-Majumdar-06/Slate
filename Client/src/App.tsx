@@ -1,7 +1,6 @@
 import { Routes, Route } from 'react-router';
 import Home from './routes/Home'
 import About from './routes/About';
-import Join from './routes/Join';
 import Create from './routes/Create';
 import Room from './routes/Room';
 
@@ -10,7 +9,6 @@ function App() {
   <Routes>
       <Route index element={<Home />} />
       <Route path='/about' element={<About />} />
-      <Route path='/join' element={<Join />} />
       <Route path='/create/:roomId' element={<Create />} />
       <Route path='/room/:roomId' element={<Room />} />
       {/* You can easily add more pages here later */}

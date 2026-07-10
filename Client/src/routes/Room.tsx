@@ -18,6 +18,7 @@ const Room = () => {
     const { roomId } = params;
     const location = useLocation();
     const username = location.state?.username || "Anonymous";
+    
     const [users, setUsers] = useState<string[]>([]);
     const [code, setCode] = useState("// code here");
     const delayRef = useRef<number | null>(null);
@@ -30,6 +31,8 @@ const Room = () => {
 
     const [excalidrawAPI, setExcalidrawAPI] =
     useState<ExcalidrawImperativeAPI | null>(null);
+
+    const isInterviewer = location.state.isInterviewer;
 
     const onCodeChange = (value: string) => {
         const newCode = value ?? "";
@@ -148,8 +151,6 @@ const Room = () => {
         };
     }, [roomId, username]);
 
-    const isInterviewer = (username == "ADMIN");
-
     
   return (
     <div className="w-screen h-screen flex flex-col">
@@ -162,8 +163,8 @@ const Room = () => {
             <div className='flex gap-4'>
                 {
                     users.map((name: string, index: number) => (
-                        <div key={index} className={`border-2 p-1 ${name == username ? "border-red-500":""}`}>
-                            {name + (name == "ADMIN" ? " (Interviewer)": "")}
+                        <div key={index} className={`border-2 p-1 ${name === username ? "border-red-500":""}`}>
+                            {name}
                         </div>
                     ))
                 }
@@ -173,9 +174,9 @@ const Room = () => {
 
             {isInterviewer && <ul className='flex gap-3'>
                 <li><button className='border p-1 cursor-pointer' onClick={()=>setIsAddProblemOpen(true)}>Add problem</button></li>
-                <li><button className='border p-1'>Save data</button></li>
+                <li><button className='border p-1 cursor-pointer'>Save data (X)</button></li>
                 <li><button className='border p-1 cursor-pointer' onClick={()=>setIsEndDialogOpen(true)}>End room</button></li>
-                <li><button className='border p-1'>Settings</button></li>
+                <li><button className='border p-1 cursor-pointer'>Settings (X)</button></li>
             </ul>}
         </header>
 
@@ -183,8 +184,8 @@ const Room = () => {
             {/* Left */}
             <Panel maxSize='40%' minSize='20%'>
                 <Group className='h-full flex flex-col' orientation='vertical'>
-                    <Panel className='w-full h-full p-4'>
-                        <textarea className='w-full h-full whitespace-pre-wrap' value={problem} onChange={(e) => onProblemUpdated(e.target.value)} disabled>
+                    <Panel className='w-full h-full p-4 relative'>
+                        <textarea className='inset-4 absolute resize-none outline-none whitespace-pre-wrap' value={problem} onChange={(e) => onProblemUpdated(e.target.value)} disabled>
                         </textarea>
                     </Panel>
 

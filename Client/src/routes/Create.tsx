@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from 'react-router';
+import { useLocation } from 'react-router';
 
 const Create = () => {
 
@@ -6,11 +7,12 @@ const Create = () => {
   const params = useParams();
 
   const { roomId } = params;
-  const username = "ADMIN";
+  const location = useLocation();
+  const username = location.state?.username || "Anonymous";
 
   const joinRoom = () => {
     if (!roomId) return;
-    navigate(`/room/${roomId}`, { state: { username: username } });
+    navigate(`/room/${roomId}`, { state: { username: username, isInterviewer: true } });
   }
   
   return (

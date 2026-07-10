@@ -1,2 +1,11 @@
 @import "tailwindcss";
 
+.geomini {
+  font-family: "Geomini", sans-serif;
+  font-optical-sizing: auto;
+}
+
+.figtree {
+  font-family: "Figtree", sans-serif;
+  font-optical-sizing: auto;
+}

@@ -1,28 +1,27 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router';
+import { useState } from 'react';
 
-const Join = () => {
+const Join = ({username}) => {
   const navigate = useNavigate();
 
   const handleSubmit = (e) => {
+    setDisable(true);
     e.preventDefault();
 
     const form = e.target;
     const formData = new FormData(form);
-    const username = formData.get("username");
     const roomId = formData.get("link");
     navigate(`/room/${roomId}`, { state: { username: username } });
   }
 
-  return (
-    <div className="min-w-screen min-h-screen flex items-center justify-center">
-        <form onSubmit={handleSubmit} className='flex flex-col justify-center items-center gap-6 border-2 p-8 rounded-xl'>
-            <div className='flex gap-4'><p>Name</p><input className='border' type="text" name='username'/></div>
-            <div className='flex gap-4'><p>Enter Code</p><input className='border' type="text" name='link' /></div>
+  const [disable, setDisable] = useState(true);  
 
-            <button type='submit' className="border-2 py-2 px-4 rounded-lg">Join</button>
+  return (
+        <form onSubmit={handleSubmit} className='w-full flex flex-col justify-between gap-4'>
+            <input className='border-2 bg-zinc-600/30 text-zinc-300 focus:text-zinc-200 outline-0 focus:outline-2 outline-emerald-600 border-zinc-600 p-3 rounded-xl' type="text" name='link' placeholder='Enter code' onChange={(e) => setDisable(e.target.value.trim().length === 0 || username.trim().length===0)}/>
+            <button type='submit' disabled={disable} className="disabled:bg-zinc-600/50 disabled:text-zinc-400/70 disabled:border-zinc-700 h-fit py-3 px-4 rounded-lg bg-emerald-600 border border-emerald-300 text-emerald-50">Join</button>
         </form>
-    </div>
   )
 }
 
