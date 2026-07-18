@@ -30,6 +30,13 @@ const io = new Server(server, {
   },
 });
 
+interface TimerState {
+    endTime: number | null;        
+    remainingTime: number | null;  
+    isPaused: boolean;
+    duration: number;             
+}
+
 interface RoomState {
     problem: string;
     code: string;
@@ -37,6 +44,7 @@ interface RoomState {
     whiteboard: {
         elements: []
     };
+    timer: TimerState;
 }
 
 const rooms = new Map<string, RoomState>();
@@ -80,7 +88,13 @@ io.on("connection", async (socket) => {
                 notes: "",
                 whiteboard: {
                     elements: [],
-                }
+                }, 
+                timer: {
+                    endTime: null,        
+                    remainingTime: null, 
+                    isPaused: false,
+                    duration: 0,             
+                },
             });
         }
 
@@ -138,6 +152,82 @@ io.on("connection", async (socket) => {
         };
 
         socket.to(roomId).emit("whiteboard-updated", room.whiteboard);
+    });
+
+    socket.on("start-timer", ({ roomId, duration }) => {
+        const room = rooms.get(roomId);
+        if(!room) return;
+
+        if (!room.timer) {
+            room.timer = { endTime: null, remainingTime: null, isPaused: false, duration: 0 };
+        }
+
+        const timer = room.timer;
+
+        if (timer.isPaused && timer.remainingTime !== null) {
+            timer.endTime = Date.now() + timer.remainingTime;
+        } else {
+            timer.duration = duration;
+            timer.endTime = Date.now() + duration * 1000;
+        }
+        
+        timer.remainingTime = null;
+        timer.isPaused = false;
+
+        io.to(roomId).emit("timer-updated", timer);
+    });
+
+    socket.on("pause-timer", ({ roomId }: { roomId: string }) => {
+        const room = rooms.get(roomId);
+        if (!room) return;
+
+        if (!room.timer) {
+            return;
+        }
+
+        const timer = room.timer;
+
+        if (timer.endTime && !timer.isPaused) {
+            timer.remainingTime = Math.max(0, timer.endTime - Date.now());
+            timer.endTime = null;
+            timer.isPaused = true;
+
+            io.to(roomId).emit("timer-updated", timer);
+        }
+    });
+
+    socket.on("stop-timer", ({ roomId }: { roomId: string }) => {
+        const room = rooms.get(roomId);
+        if (!room) return;
+
+        room.timer = { endTime: null, remainingTime: null, isPaused: false, duration: 0 };
+
+        io.to(roomId).emit("timer-updated", room.timer);
+    });
+
+    socket.on("add-time-timer", ({ roomId, extraTime }: { roomId: string; extraTime: number }) => {
+        const room = rooms.get(roomId);
+        if (!room) return;
+
+        if (!room.timer) {
+            room.timer = { endTime: null, remainingTime: null, isPaused: false, duration: 0 };
+        }
+
+        const timer = room.timer;
+
+        const extraMs = extraTime * 1000;
+
+        if (timer.isPaused && timer.remainingTime !== null) {
+            timer.remainingTime += extraMs;
+        } else if (timer.endTime !== null) {
+            timer.endTime += extraMs;
+        } else {
+            timer.duration = extraTime;
+            timer.endTime = Date.now() + extraMs;
+            timer.isPaused = false;
+        }
+
+        io.to(roomId).emit("timer-updated", timer);
     });
 
     socket.on("end-room", ({roomId}) => {
