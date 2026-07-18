@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router';
 import { socket } from '../socket/socket';
 import { useLocation } from 'react-router';
-import { Excalidraw } from "@excalidraw/excalidraw";
+import { Excalidraw, exportToSvg } from "@excalidraw/excalidraw";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import AddProblemModal from '../Components/AddProblemModal';
 import "@excalidraw/excalidraw/index.css";
@@ -12,6 +12,7 @@ import EndRoomDialog from '../Components/EndRoomDialog';
 import { useNavigate } from 'react-router';
 import { CirclePlus, MonitorX, Pause, Play, Save, Settings, Square } from 'lucide-react';
 import TimerComponent from '../Components/Timer';
+import JSZip from "jszip";
 
 const Room = () => {
 
@@ -204,6 +205,76 @@ const Room = () => {
         socket.emit("add-time-timer", { roomId, extraTime: additionalSeconds });
     };
 
+    async function saveCanvasAsSvg(excalidrawAPI: ExcalidrawImperativeAPI | null) {
+        if(!excalidrawAPI) return;
+
+        const elements = excalidrawAPI.getSceneElements();
+        const appState = excalidrawAPI.getAppState();
+        const files = excalidrawAPI.getFiles();
+
+        if (!elements || elements.length === 0) {
+            return "";
+        }
+
+        const svgElement = await exportToSvg({
+            elements: elements,            
+            appState: {
+            ...appState   
+            },
+            files: files,                  
+            exportPadding: 20,              
+            metadata: "Author: Dev Team",    
+        });
+
+        const svgTextString = new XMLSerializer().serializeToString(svgElement);
+        return svgTextString;
+    }
+
+    const handleSave = async() => {
+        if(!isInterviewer) return;
+        const zip = new JSZip();
+
+        if(!(notes.trim().length === 0)) zip.file("Notes.txt", notes);
+        if(!(code.trim().length === 0)) zip.file("Code.txt", code);
+
+        const svgTextString = await saveCanvasAsSvg(excalidrawAPI);
+
+        if(svgTextString) zip.file("whiteboard.svg", svgTextString);
+
+        // Zip file created
+
+        // Download zip file code below
+        try {
+            // Compile the string database using standard DEFLATE compression
+            const zipBlob: Blob = await zip.generateAsync({
+                type: "blob",
+                compression: "DEFLATE",
+                compressionOptions: { 
+                    level: 6 // Balanced compression setting for speedy downloads
+                }
+            });
+
+            // Map the binary file into browser memory space
+            const downloadUrl: string = URL.createObjectURL(zipBlob);
+
+            // Mount a hidden link to trigger the user's browser save menu
+            const link: HTMLAnchorElement = document.createElement("a");
+            link.href = downloadUrl;
+            link.download = "Room-data.zip";
+
+            document.body.appendChild(link);
+            link.click();
+
+            // Memory cleanup to avoid RAM leaks
+            document.body.removeChild(link);
+            URL.revokeObjectURL(downloadUrl);
+
+        } catch (error) {
+            console.error("Failed to compile and download text workspace package:", error);
+            alert("An error occurred while compiling your workspace zip archive.");
+        }
+    }
+
     
   return (
     <div className="w-screen h-screen flex flex-col bg-zinc-900 geomini">
@@ -237,7 +308,7 @@ const Room = () => {
 
             {isInterviewer && <ul className='flex gap-2 items-center'>
                 <li><button className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer' onClick={()=>setIsAddProblemOpen(true)}><CirclePlus size="1.5rem" color='gray'/></button></li>
-                <li><button className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer'><Save color='gray' size="1.5rem"/></button></li>
+                <li><button className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer' onClick={handleSave}><Save color='gray' size="1.5rem"/></button></li>
                 <li><button className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer' onClick={()=>setIsEndDialogOpen(true)}><MonitorX size="1.5rem" color="gray"/></button></li>
                 <li><button className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer'><Settings size="1.5rem" color="gray"/></button></li>
             </ul>}
