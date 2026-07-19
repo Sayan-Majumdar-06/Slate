@@ -16,7 +16,7 @@ const Create = () => {
 
   const joinRoom = () => {
     if (!roomId) return;
-    navigate(`/room/${roomId}`, { state: { username: username, isInterviewer: true } });
+    navigate(`/room/${roomId}`, { state: { username: username } });
   }
 
   const handleCopy = () => {

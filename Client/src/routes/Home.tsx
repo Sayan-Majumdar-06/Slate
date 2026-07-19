@@ -14,7 +14,7 @@ export default function Home() {
 
     const { roomID } = await response.json();
 
-    navigate(`/create/${roomID}`, { state: {username: username} });
+    navigate(`/create/${roomID}`, { state: {username: username, verified: true} });
   }
   return (
     <div className="w-screen h-screen bg-zinc-900 flex">

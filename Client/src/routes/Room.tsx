@@ -21,7 +21,12 @@ const Room = () => {
     const params = useParams();
     const { roomId } = params;
     const location = useLocation();
-    const username = location.state?.username || "Anonymous";
+
+    useEffect(() => {
+      if(!location.state?.username?.trim()) navigate("/");
+    }, []);
+    
+    const username = location.state?.username;
     
     const [users, setUsers] = useState<string[]>([]);
     const [code, setCode] = useState("// code here");
@@ -41,7 +46,7 @@ const Room = () => {
     const [excalidrawAPI, setExcalidrawAPI] =
     useState<ExcalidrawImperativeAPI | null>(null);
 
-    const isInterviewer = location.state.isInterviewer;
+    const [isInterviewer, setIsInterviewer] = useState(false);
 
     const onCodeChange = (value: string) => {
         const newCode = value ?? "";
@@ -80,6 +85,7 @@ const Room = () => {
         });       
     }
 
+    // code changed listener
     useEffect(() => {
       socket.on('code-changed', (code) => {
         setCode(code);
@@ -90,6 +96,7 @@ const Room = () => {
       }
     }, [])
 
+    // problem update listener
     useEffect(() => {
       socket.on('problem-updated', (p) => {
         setProblem(p);
@@ -100,6 +107,7 @@ const Room = () => {
       }
     }, [])
 
+    // whiteboard update listener
     useEffect(() => {
         if(!excalidrawAPI) return;
 
@@ -143,6 +151,7 @@ const Room = () => {
       }
     }, [excalidrawAPI])
 
+    // notes update listener
     useEffect(() => {
       socket.on('notes-updated', (notes) => {
         setNotes(notes);
@@ -153,45 +162,78 @@ const Room = () => {
       }
     }, [])
 
+    // close room listener
     useEffect(() => {
-      socket.on('end-room', (roomId) => {
+      socket.on('room-closed', () => {
         alert("Room has ended !");
 
-        navigate('/');
         socket.disconnect();
+        navigate('/');
       })
     
       return () => {
-        socket.off('end-room');
+        socket.off('room-closed');
       }
     }, [])
     
+    // Initialise room listeners
     useEffect(() => {
-        socket.auth = { roomId, username };
-        socket.connect();
 
-        socket.on("connect", () => {
-            // console.log("Connected: ", socket.roomId);
-            socket.emit("join-room", roomId);
-        });
+        let cancelled = false;
 
-        socket.on("room-state", (room) => {
-            setCode(room.code);
-            setProblem(room.problem);
-            setNotes(room.notes);
-        })
+        const initializeRoom = async () => {
+            try {
+                const response = await axios.get(
+                    `http://localhost:3000/room/${roomId}`
+                );
 
-        socket.on("user_list_updated", (userList: string[]) => {
-            console.log("Received users:", userList);
-            setUsers(userList);
-        });
+                if (cancelled) return;
+
+                if (!response.data.exists) {
+                    navigate("/");
+                    return;
+                }
+
+                socket.auth = { roomId, username };
+
+                socket.on("connect", () => {
+                    socket.emit("join-room", roomId);
+                });
+
+                socket.on("invalid-room", () => {
+                    console.log("Room not found");
+                    navigate("/");
+                });
+
+                socket.on("room-state", (room) => {
+                    setCode(room.code);
+                    setProblem(room.problem);
+                    setNotes(room.notes);
+                    setIsInterviewer(room.interviewerId === socket.id);
+                });
+
+                socket.on("user_list_updated", (userList: string[]) => {
+                    setUsers(userList);
+                });
+
+                socket.connect();
+            } catch {
+                if (!cancelled) {
+                    navigate("/");
+                }
+            }
+        };
+
+        initializeRoom();
 
         return () => {
             socket.off("connect");
+            socket.off("room-state");
             socket.off("user_list_updated");
+            socket.off("invalid-room");
             socket.disconnect();
         };
-    }, [roomId, username]);
+    }, [roomId, username, navigate]);
 
     const [language, setLanguage] = useState("cpp");
 
@@ -313,7 +355,7 @@ const Room = () => {
             <div className='flex gap-4'>
                 {
                     users.map((name: string, index: number) => (
-                        <div key={index} className={`flex py-0.5 px-2 items-center gap-2 border-2 rounded-xl bg-zinc-700 ${name === username ? "border-emerald-400": "border-zinc-500"}`}>
+                        <div key={index} className={`flex py-0.5 px-2 items-center gap-2 border-2 rounded-xl bg-zinc-700 border-zinc-500`}>
                             <div className="box-border aspect-square w-[1.7rem] h-[1.7rem] p-1 flex justify-center items-center rounded-full bg-emerald-500 text-emerald-50">{name[0]}</div>
                             <div className='text-xs text-emerald-50'>{name}</div>
                         </div>
@@ -410,7 +452,7 @@ const Room = () => {
                                     <textarea value={codeOutput} placeholder='Output' readOnly className='outline-none read-only:text-zinc-500 border grow text-zinc-300 resize-none rounded-lg border-zinc-600 p-2'>
                                     </textarea>
 
-                                    <textarea className='outline-none read-only:text-zinc-500 border scrollbar-none text-zinc-300 resize-none rounded-lg border-zinc-600 p-2' value={codeErrors}></textarea>                                    
+                                    <textarea readOnly className='outline-none read-only:text-zinc-500 border scrollbar-none text-zinc-300 resize-none rounded-lg border-zinc-600 p-2' value={codeErrors}></textarea>                                    
                                 </div>
                                     
                             </div>                       

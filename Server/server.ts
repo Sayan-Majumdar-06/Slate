@@ -27,6 +27,24 @@ app.get("/", (req: Request, res: Response) => {
 app.post("/rooms", (req, res) => {
     const roomID = uuidv4();
 
+    rooms.set(roomID, {
+        interviewerId: null,
+        problem: "",
+        code: "",
+        notes: "",
+        whiteboard: {
+            elements: [],
+        },
+        timer: {
+            endTime: null,
+            remainingTime: null,
+            isPaused: false,
+            duration: 0,
+        },
+    });
+
+    console.log("room created: ", roomID);
+
     res.json({roomID});
 })
 
@@ -62,6 +80,7 @@ interface TimerState {
 }
 
 interface RoomState {
+    interviewerId: string | null;
     problem: string;
     code: string;
     notes: string;
@@ -90,6 +109,16 @@ const getRoom = (roomId: string) => {
     return room;
 }
 
+app.get("/room/:roomid", (req, res) => {
+    console.log("Current rooms:", [...rooms.keys()]);
+
+    const {roomid} = req.params;
+
+    res.json({
+        exists: rooms.has(roomid)
+    })
+});
+
 io.on("connection", async (socket) => {
     const { roomId, username } = socket.handshake.auth; 
 
@@ -101,32 +130,28 @@ io.on("connection", async (socket) => {
     socket.data.roomId = roomId;    
 
     socket.on("join-room", async (roomId: string) => {
-        socket.join(roomId);
+        const room = rooms.get(roomId);
 
-        // console.log(`${socket.id} joined ${roomId}`);
-
-        if(!rooms.has(roomId)) {
-            rooms.set(roomId, {
-                problem: "",
-                code: "",
-                notes: "",
-                whiteboard: {
-                    elements: [],
-                }, 
-                timer: {
-                    endTime: null,        
-                    remainingTime: null, 
-                    isPaused: false,
-                    duration: 0,             
-                },
-            });
+        if(!room) {
+            socket.emit("invalid-room");
+            return;
         }
 
-        const room = getRoom(roomId);
+        socket.join(roomId);
+
+        if(!room.interviewerId) {
+            room.interviewerId = socket.id;
+        }
 
         socket.emit("room-state", room);
         await getOnlineUserIds(io, roomId);
     });
+
+    const isInterviewer = (roomId: string) => {
+        const room = getRoom(roomId);
+
+        return (room?.interviewerId === socket.id);
+    }
 
     socket.on('code-changed', ({roomId, code}) => {
         const room = getRoom(roomId);
@@ -254,15 +279,20 @@ io.on("connection", async (socket) => {
         io.to(roomId).emit("timer-updated", timer);
     });
 
-    socket.on("end-room", ({roomId}) => {
-        console.log("Received end-room:", roomId);
-        io.to(roomId).emit("end-room");
+    function closeRoom(roomId: string) {
+        io.to(roomId).emit("room-closed");
+
+        io.in(roomId).socketsLeave(roomId);
 
         rooms.delete(roomId);
+    }
+
+    socket.on("end-room", ({roomId}) => {
+        if(!isInterviewer(roomId)) return;
+        closeRoom(roomId);
     });
 
     socket.on("disconnect", async () => {
-        // console.log(`${socket.id} disconnected`);
         const targetRoom = socket.data.roomId;
 
         if(!targetRoom) return;
@@ -270,6 +300,11 @@ io.on("connection", async (socket) => {
         if(!rooms.has(targetRoom)) return;
         
         if(targetRoom) {
+            if (isInterviewer(targetRoom)) {
+                closeRoom(targetRoom);
+                return;
+            }
+
             await getOnlineUserIds(io, targetRoom);
         }
     });
