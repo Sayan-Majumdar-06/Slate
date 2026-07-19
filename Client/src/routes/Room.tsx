@@ -10,9 +10,10 @@ import AddProblemModal from '../Components/AddProblemModal';
 import "@excalidraw/excalidraw/index.css";
 import EndRoomDialog from '../Components/EndRoomDialog';
 import { useNavigate } from 'react-router';
-import { CirclePlus, MonitorX, Pause, Play, Save, Settings, Square } from 'lucide-react';
+import { CirclePlus, MonitorX, Pause, Play, Presentation, Save, Square } from 'lucide-react';
 import TimerComponent from '../Components/Timer';
 import JSZip from "jszip";
+import axios from 'axios';
 
 const Room = () => {
 
@@ -31,6 +32,11 @@ const Room = () => {
     const [isEndDialogOpen, setIsEndDialogOpen] = useState(false);
     const [problem, setProblem] = useState("Problem statement goes here");
     const [notes, setNotes] = useState("Notes");
+    const [codeInput, setCodeInput] = useState("");
+    const [codeOutput, setCodeOutput] = useState("");
+    const [codeErrors, setCodeErrors] = useState("");
+
+    const [whiteboardActive, setWhiteboardActive] = useState(false);
 
     const [excalidrawAPI, setExcalidrawAPI] =
     useState<ExcalidrawImperativeAPI | null>(null);
@@ -230,6 +236,26 @@ const Room = () => {
         return svgTextString;
     }
 
+    const executeCode = async() => {
+        const exeData = {
+            "language": "cpp",
+            "files": [
+                {
+                    "name": "main.cpp",
+                    "content": code
+                }
+            ],
+            "stdin": codeInput,
+        }
+
+        const response = await axios.post("http://localhost:3000/run-code", exeData);
+
+        console.log(response.data);
+
+        setCodeOutput(response.data.stdout);
+        setCodeErrors(response.data.stderr || response.data.creditsRemaining);
+    }
+
     const handleSave = async() => {
         if(!isInterviewer) return;
         const zip = new JSZip();
@@ -306,12 +332,14 @@ const Room = () => {
                 </div>}
             </div>
 
+            <ul className='flex gap-2 items-center'>
             {isInterviewer && <ul className='flex gap-2 items-center'>
                 <li><button className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer' onClick={()=>setIsAddProblemOpen(true)}><CirclePlus size="1.5rem" color='gray'/></button></li>
                 <li><button className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer' onClick={handleSave}><Save color='gray' size="1.5rem"/></button></li>
                 <li><button className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer' onClick={()=>setIsEndDialogOpen(true)}><MonitorX size="1.5rem" color="gray"/></button></li>
-                <li><button className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer'><Settings size="1.5rem" color="gray"/></button></li>
             </ul>}
+                <li><button className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer' onClick={()=>setWhiteboardActive(prev => !prev)}><Presentation size="1.5rem" color='gray'/></button></li>
+            </ul>
         </header>
 
         <Group orientation='horizontal' className='flex-1 px-8 pb-4 pt-2 gap-0.5'> 
@@ -348,8 +376,9 @@ const Room = () => {
                                 <option value="python">Python</option>
                             </select>
 
-                            <button className='flex gap-1 text-emerald-50 text-[13px] font-medium bg-zinc-800 items-center p-1 px-1.5 rounded-md'><Play color='#00bc7d' size="1.2rem"/><span>Run</span></button>
+                            <button className='flex gap-1 text-emerald-50 text-[13px] font-medium bg-zinc-800 items-center p-1 px-1.5 rounded-md' onClick={executeCode}><Play color='#00bc7d' size="1.2rem"/><span>Run</span></button>
                         </div>
+                        
                         <div className='flex-1 min-h-0 pt-4'>
                             <Editor height='100%' width='100%' defaultLanguage={language} theme='vs-dark' value={code} onChange={(value) => onCodeChange(value)}/>
                         </div>
@@ -357,19 +386,36 @@ const Room = () => {
 
                     <Separator className="h-0.5 rounded-full bg-transparent hover:bg-blue-500" />
 
-                    <Panel maxSize='70%' minSize='10%' defaultSize="20%" className='h-full w-full p-0.5 rounded-xl border border-zinc-700 bg-[#1e1e21]'>
-                        <Excalidraw theme='dark' onChange={(elements) => {
-                            if(whiteboardDelayRef.current) {
-                                clearTimeout(whiteboardDelayRef.current);
-                            }
+                    {whiteboardActive ? 
+                        <Panel maxSize='70%' minSize='10%' defaultSize="20%" className={`h-full w-full p-0.5 rounded-xl border border-zinc-700 bg-[#1e1e21]`}>
+                            <Excalidraw theme='dark' onChange={(elements) => {
+                                if(whiteboardDelayRef.current) {
+                                    clearTimeout(whiteboardDelayRef.current);
+                                }
 
-                            whiteboardDelayRef.current = window.setTimeout(()=>socket.emit("whiteboard-updated", {
-                                roomId: roomId,
-                                elements
-                            }),50);
-                            
-                        }} excalidrawAPI={(api) => setExcalidrawAPI(api)}/>                        
-                    </Panel>
+                                whiteboardDelayRef.current = window.setTimeout(()=>socket.emit("whiteboard-updated", {
+                                    roomId: roomId,
+                                    elements
+                                }),50);
+                                
+                            }} excalidrawAPI={(api) => setExcalidrawAPI(api)}/>                        
+                        </Panel>
+                    :
+                        <Panel maxSize='70%' minSize='20%' defaultSize="40%" className={`h-full w-full p-0.5 rounded-xl border border-zinc-700 bg-[#1e1e21]`}>
+                            <div className='flex gap-2 p-2 h-full font-mono'>
+                                <textarea value={codeInput} onChange={(e)=>setCodeInput(e.target.value)} className='border w-1/2 text-zinc-300 resize-none outline-none rounded-lg border-zinc-600 p-2' placeholder='Input'>
+                                </textarea>
+
+                                <div className='flex flex-col grow gap-1'>
+                                    <textarea value={codeOutput} placeholder='Output' readOnly className='outline-none read-only:text-zinc-500 border grow text-zinc-300 resize-none rounded-lg border-zinc-600 p-2'>
+                                    </textarea>
+
+                                    <textarea className='outline-none read-only:text-zinc-500 border scrollbar-none text-zinc-300 resize-none rounded-lg border-zinc-600 p-2' value={codeErrors}></textarea>                                    
+                                </div>
+                                    
+                            </div>                       
+                        </Panel>
+                    }
                 </Group>
             </Panel>
         </Group>

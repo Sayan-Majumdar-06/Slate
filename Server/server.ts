@@ -3,6 +3,10 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
+import axios from 'axios';
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const PORT = process.env.PORT || 3000;
 const app = express();
@@ -14,6 +18,8 @@ app.use(
     })
 );
 
+app.use(express.json());
+
 app.get("/", (req: Request, res: Response) => {
     res.send("Server is running");
 });
@@ -22,6 +28,24 @@ app.post("/rooms", (req, res) => {
     const roomID = uuidv4();
 
     res.json({roomID});
+})
+
+app.post("/run-code", async(req, res) => {
+    try {
+        const response = await axios.request({
+            method: "POST",
+            headers: {
+                "Content-type": "application/json",
+                "x-api-key": process.env.API_KEY,
+            },
+            url: 'https://api.onecompiler.com/v1/run',
+            data: req.body
+        });
+
+        res.json(response.data);
+    } catch(error:any) {
+        res.status(500).json({message: error.message});
+    }
 })
 
 const io = new Server(server, {
