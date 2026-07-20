@@ -45,8 +45,8 @@ const Create = () => {
         </div>
 
         <div className='mt-8 flex gap-8'>
-          <button disabled={copied} className="min-w-[124px] disabled:bg-zinc-600/50 disabled:text-zinc-100/70 disabled:border-emerald-800 p-3 rounded-lg border-2 bg-zinc-500/60 border-emerald-600/80 text-emerald-50" onClick={() => {navigator.clipboard.writeText(roomId?roomId:""); handleCopy();}}>{copied? <div className='flex gap-2'><CircleCheck color='green'/><span>Copied !</span> </div>: "Copy Code"}</button>
-          <button className="min-w-[124px] p-3 rounded-lg bg-emerald-600 border border-emerald-300 text-emerald-50" onClick={joinRoom}>Enter Room</button>
+          <button disabled={copied} className="min-w-[124px] disabled:bg-zinc-600/50 disabled:text-zinc-100/70 disabled:border-emerald-800 p-3 rounded-lg border-2 bg-zinc-500/60 border-emerald-600/80 text-emerald-50 cursor-pointer disabled:hover:shadow-none hover:shadow-[0_0_15px_#43615c] transition-shadow duration-200  " onClick={() => {navigator.clipboard.writeText(roomId?roomId:""); handleCopy();}}>{copied? <div className='flex gap-2'><CircleCheck color='green'/><span>Copied !</span> </div>: "Copy Code"}</button>
+          <button className="min-w-[124px] p-3 rounded-lg bg-emerald-600 border border-emerald-300 text-emerald-50 cursor-pointer hover:shadow-[0_0_15px_#009966] transition-shadow duration-200  " onClick={joinRoom}>Enter Room</button>
         </div>
       </div>
     </div>
