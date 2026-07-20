@@ -29,6 +29,7 @@ app.post("/rooms", (req, res) => {
 
     rooms.set(roomID, {
         interviewerId: null,
+        hostToken: req.body.hostToken,
         problem: "",
         code: "",
         notes: "",
@@ -81,6 +82,7 @@ interface TimerState {
 
 interface RoomState {
     interviewerId: string | null;
+    hostToken: string | null;
     problem: string;
     code: string;
     notes: string;
@@ -91,6 +93,7 @@ interface RoomState {
 }
 
 const rooms = new Map<string, RoomState>();
+const deletionTimers = new Map<string, NodeJS.Timeout>();
 
 async function getOnlineUserIds(io: Server, roomId: string) {
   const sockets = await io.in(roomId).fetchSockets();
@@ -137,10 +140,20 @@ io.on("connection", async (socket) => {
             return;
         }
 
+        console.log("received host token", socket.handshake.auth.hostToken);
+        console.log("Stored host token", room.hostToken);
+
         socket.join(roomId);
 
-        if(!room.interviewerId) {
+        if(!room.interviewerId || room.hostToken === socket.handshake.auth.hostToken) {
             room.interviewerId = socket.id;
+
+            const timer = deletionTimers.get(roomId);
+
+            if(timer) {
+                clearTimeout(timer);
+                deletionTimers.delete(roomId);
+            }
         }
 
         socket.emit("room-state", room);
@@ -301,7 +314,13 @@ io.on("connection", async (socket) => {
         
         if(targetRoom) {
             if (isInterviewer(targetRoom)) {
-                closeRoom(targetRoom);
+
+                const timer = setTimeout(() => {
+                    closeRoom(targetRoom);
+                    deletionTimers.delete(targetRoom);
+                }, 5000);
+                
+                deletionTimers.set(targetRoom, timer);
                 return;
             }
 

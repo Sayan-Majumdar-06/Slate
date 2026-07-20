@@ -8,16 +8,27 @@ export default function Home() {
   const [username, setUsername] = useState("");
 
   const createRoom = async () => {
+    const hostToken = crypto.randomUUID();
+
+    sessionStorage.setItem("hostToken", hostToken);
+
     const response = await fetch("http://localhost:3000/rooms", {
       method: "POST",
+      headers: {
+        "Content-type": "application/json",
+      },
+      body: JSON.stringify({
+        hostToken
+      })
     });
 
     const { roomID } = await response.json();
 
-    navigate(`/create/${roomID}`, { state: {username: username, verified: true} });
+    navigate(`/create/${roomID}`, { state: {username: username, hostToken: hostToken} });
   }
   return (
     <div className="w-screen h-screen bg-zinc-900 flex">
+      {/* Branding / Info section */}
       <section className="w-[52%] flex flex-col justify-center items-end gap-2 p-20 pr-12">
         <div className="text-left flex flex-col gap-2">
           <div className="flex gap-2 items-center">
@@ -55,8 +66,10 @@ export default function Home() {
         </div>
       </section>
 
+
+      {/* Join / Create Card */}
       <section className="grow flex items-center">
-        <div className="w-[400px] py-8 px-12 border rounded-xl flex flex-col gap-4 justify-center bg-zinc-800 border-zinc-600 figtree">
+        <div className="w-[400px] py-8 px-12 border hover:shadow-[0_0_20px_#27272a] transition-shadow duration-200 rounded-xl flex flex-col gap-4 justify-center bg-zinc-800 border-zinc-600 figtree">
 
           <h2 className="text-zinc-300 text-xl mb-2">Join a room</h2>
 
@@ -74,15 +87,13 @@ export default function Home() {
 
             <div className="flex flex-col gap-4 w-full">
               <h2 className="text-zinc-300 text-xl">Or, host a new room</h2>
-              <button disabled={username.trim().length===0} className="disabled:bg-zinc-600/50 disabled:text-zinc-400/70 disabled:border-zinc-700 p-3 rounded-lg bg-emerald-600 border border-emerald-300 text-emerald-50" onClick={createRoom}>Create Room</button>
+              <button disabled={username.trim().length===0} className="disabled:bg-zinc-600/50 cursor-pointer hover:shadow-[0_0_15px_#009966] transition-shadow duration-200  disabled:cursor-default disabled:hover:shadow-none disabled:text-zinc-400/70 disabled:border-zinc-700 p-3 rounded-lg bg-emerald-600 border border-emerald-300 text-emerald-50" onClick={createRoom}>Create Room</button>
             </div>
 
           </div>
 
         </div>
       </section>
-
-      
     </div>
   );
 }

@@ -42,6 +42,7 @@ const Room = () => {
     const [codeErrors, setCodeErrors] = useState("");
 
     const [whiteboardActive, setWhiteboardActive] = useState(false);
+    const [runActive, setRunActive] = useState(true);
 
     const [excalidrawAPI, setExcalidrawAPI] =
     useState<ExcalidrawImperativeAPI | null>(null);
@@ -194,7 +195,7 @@ const Room = () => {
                     return;
                 }
 
-                socket.auth = { roomId, username };
+                socket.auth = { roomId, username, hostToken: sessionStorage.getItem("hostToken") };
 
                 socket.on("connect", () => {
                     socket.emit("join-room", roomId);
@@ -279,11 +280,12 @@ const Room = () => {
     }
 
     const executeCode = async() => {
+        setRunActive(false);
         const exeData = {
-            "language": "cpp",
+            "language": language,
             "files": [
                 {
-                    "name": "main.cpp",
+                    "name": `main.${(language === "cpp") ? "cpp" : (language === "python"?"py": (language === "javascript")? "js" : "" )}`,
                     "content": code
                 }
             ],
@@ -292,10 +294,10 @@ const Room = () => {
 
         const response = await axios.post("http://localhost:3000/run-code", exeData);
 
-        console.log(response.data);
-
         setCodeOutput(response.data.stdout);
         setCodeErrors(response.data.stderr || response.data.creditsRemaining);
+
+        setRunActive(true);
     }
 
     const handleSave = async() => {
@@ -376,7 +378,9 @@ const Room = () => {
 
             <ul className='flex gap-2 items-center'>
             {isInterviewer && <ul className='flex gap-2 items-center'>
-                <li><button className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer' onClick={()=>setIsAddProblemOpen(true)}><CirclePlus size="1.5rem" color='gray'/></button></li>
+                <li>
+                    <button className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer' onClick={()=>setIsAddProblemOpen(true)}><CirclePlus size="1.5rem" color='gray'/></button>
+                </li>
                 <li><button className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer' onClick={handleSave}><Save color='gray' size="1.5rem"/></button></li>
                 <li><button className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer' onClick={()=>setIsEndDialogOpen(true)}><MonitorX size="1.5rem" color="gray"/></button></li>
             </ul>}
@@ -411,14 +415,14 @@ const Room = () => {
                 <Group className='flex-1 h-full flex gap-0.5 flex-col' orientation='vertical'>
                     <Panel className='w-full h-full flex flex-col rounded-xl border border-zinc-700 overflow-hidden scrollbar-none'>
                         <div className='shrink-0 py-2 text-white px-4 flex justify-between items-center border-b border-b-zinc-600'>
-                            <select className='bg-zinc-800 hover:bg-zinc-700/50 rounded-md text-sm figtree p-1 px-2 text-zinc-200 appearance-none' value={language} onChange={(e)=>setLanguage(e.target.value)}>
+                            <select className='bg-zinc-800 hover:bg-zinc-700/50 rounded-md text-sm figtree p-1 px-2 text-zinc-200 appearance-auto' value={language} onChange={(e)=>setLanguage(e.target.value)}>
                                 <option value="" disabled>Choose language: </option>
                                 <option value="cpp">C++</option>
                                 <option value="javascript">JavaScript</option>
                                 <option value="python">Python</option>
                             </select>
 
-                            <button className='flex gap-1 text-emerald-50 text-[13px] font-medium bg-zinc-800 items-center p-1 px-1.5 rounded-md' onClick={executeCode}><Play color='#00bc7d' size="1.2rem"/><span>Run</span></button>
+                            <button disabled={!runActive} className='flex gap-1 text-emerald-50 text-[13px] font-medium bg-zinc-800 items-center p-1 px-1.5 rounded-md border border-emerald-700 cursor-pointer' onClick={executeCode}><Play color='#00bc7d' size="1.2rem"/><span>Run</span></button>
                         </div>
                         
                         <div className='flex-1 min-h-0 pt-4'>
@@ -449,12 +453,11 @@ const Room = () => {
                                 </textarea>
 
                                 <div className='flex flex-col grow gap-1'>
-                                    <textarea value={codeOutput} placeholder='Output' readOnly className='outline-none read-only:text-zinc-500 border grow text-zinc-300 resize-none rounded-lg border-zinc-600 p-2'>
+                                    <textarea value={codeOutput} placeholder='Output : current version has limited credits' readOnly className='outline-none read-only:text-zinc-500 border grow text-zinc-300 resize-none rounded-lg border-zinc-600 p-2'>
                                     </textarea>
 
-                                    <textarea readOnly className='outline-none read-only:text-zinc-500 border scrollbar-none text-zinc-300 resize-none rounded-lg border-zinc-600 p-2' value={codeErrors}></textarea>                                    
+                                    <textarea readOnly className='outline-none read-only:text-zinc-500 border scrollbar-none text-zinc-300 resize-none rounded-lg border-zinc-600 p-2' placeholder='code errors / remaining credits shown here' value={codeErrors}></textarea>                                    
                                 </div>
-                                    
                             </div>                       
                         </Panel>
                     }
