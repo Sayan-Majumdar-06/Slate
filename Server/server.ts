@@ -44,8 +44,6 @@ app.post("/rooms", (req, res) => {
         },
     });
 
-    console.log("room created: ", roomID);
-
     res.json({roomID});
 })
 
@@ -97,7 +95,7 @@ const deletionTimers = new Map<string, NodeJS.Timeout>();
 
 async function getOnlineUserIds(io: Server, roomId: string) {
   const sockets = await io.in(roomId).fetchSockets();
-  const users = sockets.map(s => s.data.username).filter(Boolean);
+  const users = sockets.map(s => ({username: s.data.username, id: s.id})).filter(Boolean);
 
   io.to(roomId).emit("user_list_updated", users);
 }
@@ -113,8 +111,6 @@ const getRoom = (roomId: string) => {
 }
 
 app.get("/room/:roomid", (req, res) => {
-    console.log("Current rooms:", [...rooms.keys()]);
-
     const {roomid} = req.params;
 
     res.json({
@@ -139,9 +135,6 @@ io.on("connection", async (socket) => {
             socket.emit("invalid-room");
             return;
         }
-
-        console.log("received host token", socket.handshake.auth.hostToken);
-        console.log("Stored host token", room.hostToken);
 
         socket.join(roomId);
 
@@ -202,7 +195,6 @@ io.on("connection", async (socket) => {
     });
 
     socket.on("whiteboard-updated", ({roomId, elements}) => {
-        console.log("whiteboard update for", roomId);
         const room = getRoom(roomId);
 
         if(!room) {

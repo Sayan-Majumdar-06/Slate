@@ -10,10 +10,11 @@ import AddProblemModal from '../Components/AddProblemModal';
 import "@excalidraw/excalidraw/index.css";
 import EndRoomDialog from '../Components/EndRoomDialog';
 import { useNavigate } from 'react-router';
-import { CirclePlus, MonitorX, Pause, Play, Presentation, Save, Square } from 'lucide-react';
+import { CirclePlus, Crown, Loader, MonitorX, Pause, Play, Presentation, Save, Square } from 'lucide-react';
 import TimerComponent from '../Components/Timer';
 import JSZip from "jszip";
 import axios from 'axios';
+import toast, { Toaster } from 'react-hot-toast';
 
 const Room = () => {
 
@@ -27,8 +28,13 @@ const Room = () => {
     }, []);
     
     const username = location.state?.username;
+
+    interface User {
+        id: string;
+        username: string;
+    }
     
-    const [users, setUsers] = useState<string[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [code, setCode] = useState("// code here");
     const delayRef = useRef<number | null>(null);
     const whiteboardDelayRef = useRef<number | null>(null);
@@ -43,6 +49,7 @@ const Room = () => {
 
     const [whiteboardActive, setWhiteboardActive] = useState(false);
     const [runActive, setRunActive] = useState(true);
+    const [isSaveActive, setIsSaveActive] = useState(true);
 
     const [excalidrawAPI, setExcalidrawAPI] =
     useState<ExcalidrawImperativeAPI | null>(null);
@@ -166,10 +173,10 @@ const Room = () => {
     // close room listener
     useEffect(() => {
       socket.on('room-closed', () => {
-        alert("Room has ended !");
-
         socket.disconnect();
-        navigate('/');
+        toast.error("Room closed");
+
+        navigate("/");
       })
     
       return () => {
@@ -202,7 +209,7 @@ const Room = () => {
                 });
 
                 socket.on("invalid-room", () => {
-                    console.log("Room not found");
+                    toast.error("Room not found");
                     navigate("/");
                 });
 
@@ -213,7 +220,7 @@ const Room = () => {
                     setIsInterviewer(room.interviewerId === socket.id);
                 });
 
-                socket.on("user_list_updated", (userList: string[]) => {
+                socket.on("user_list_updated", (userList: User[]) => {
                     setUsers(userList);
                 });
 
@@ -240,6 +247,7 @@ const Room = () => {
 
     const handleStart = (durationInSeconds: number) => {
         socket.emit("start-timer", { roomId, duration: durationInSeconds });
+        toast.success("Timer started");
     };
 
     const handlePause = () => {
@@ -248,14 +256,20 @@ const Room = () => {
 
     const handleReset = () => {
         socket.emit("stop-timer", { roomId });
+        toast.success("Timer reset");
     };
 
     const handleAddTime = (additionalSeconds: number) => {
         socket.emit("add-time-timer", { roomId, extraTime: additionalSeconds });
+        toast.success(`Added ${(additionalSeconds)/60} minutes`);
     };
 
     async function saveCanvasAsSvg(excalidrawAPI: ExcalidrawImperativeAPI | null) {
         if(!excalidrawAPI) return;
+
+        if (!isInterviewer) {
+            return;
+        }
 
         const elements = excalidrawAPI.getSceneElements();
         const appState = excalidrawAPI.getAppState();
@@ -298,10 +312,16 @@ const Room = () => {
         setCodeErrors(response.data.stderr || response.data.creditsRemaining);
 
         setRunActive(true);
+        toast.success("Code execution complete");
     }
 
     const handleSave = async() => {
-        if(!isInterviewer) return;
+        if (!isInterviewer) {
+            return;
+        }
+
+        setIsSaveActive(false);
+
         const zip = new JSZip();
 
         if(!(notes.trim().length === 0)) zip.file("Notes.txt", notes);
@@ -339,6 +359,9 @@ const Room = () => {
             document.body.removeChild(link);
             URL.revokeObjectURL(downloadUrl);
 
+            toast.success("Room data downloaded");
+            setIsSaveActive(true);
+
         } catch (error) {
             console.error("Failed to compile and download text workspace package:", error);
             alert("An error occurred while compiling your workspace zip archive.");
@@ -356,10 +379,10 @@ const Room = () => {
         <header className='py-2 px-8 flex justify-between'>
             <div className='flex gap-4'>
                 {
-                    users.map((name: string, index: number) => (
-                        <div key={index} className={`flex py-0.5 px-2 items-center gap-2 border-2 rounded-xl bg-zinc-700 border-zinc-500`}>
-                            <div className="box-border aspect-square w-[1.7rem] h-[1.7rem] p-1 flex justify-center items-center rounded-full bg-emerald-500 text-emerald-50">{name[0]}</div>
-                            <div className='text-xs text-emerald-50'>{name}</div>
+                    users.map(({id, username}) => (
+                        <div key={id} className={`flex py-0.5 px-2 items-center gap-2 border-2 rounded-xl ${id === socket?.id ?"bg-emerald-500/20 border-emerald-300":"bg-zinc-800 border-zinc-500"}`}>
+                            <div className="box-border aspect-square w-[1.7rem] h-[1.7rem] p-1 flex justify-center items-center rounded-full bg-emerald-500 text-emerald-50">{username[0]}</div>
+                            <div className='text-xs text-emerald-50'>{username}</div>
                         </div>
                     ))
                 }
@@ -381,7 +404,7 @@ const Room = () => {
                 <li>
                     <button className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer' onClick={()=>setIsAddProblemOpen(true)}><CirclePlus size="1.5rem" color='gray'/></button>
                 </li>
-                <li><button className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer' onClick={handleSave}><Save color='gray' size="1.5rem"/></button></li>
+                <li><button disabled={!isSaveActive} className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer' onClick={handleSave}><Save color='gray' size="1.5rem"/></button></li>
                 <li><button className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer' onClick={()=>setIsEndDialogOpen(true)}><MonitorX size="1.5rem" color="gray"/></button></li>
             </ul>}
                 <li><button className='hover:bg-zinc-800 rounded-md p-1 transition-colors duration-150 cursor-pointer' onClick={()=>setWhiteboardActive(prev => !prev)}><Presentation size="1.5rem" color='gray'/></button></li>
@@ -422,7 +445,7 @@ const Room = () => {
                                 <option value="python">Python</option>
                             </select>
 
-                            <button disabled={!runActive} className='flex gap-1 text-emerald-50 text-[13px] font-medium bg-zinc-800 items-center p-1 px-1.5 rounded-md border border-emerald-700 cursor-pointer' onClick={executeCode}><Play color='#00bc7d' size="1.2rem"/><span>Run</span></button>
+                            <button disabled={!runActive} className='flex gap-1 text-emerald-50 text-[13px] font-medium bg-zinc-800 items-center p-1 px-1.5 rounded-md border border-emerald-700 cursor-pointer' onClick={executeCode}>{runActive?<><Play color='#00bc7d' size="1.2rem"/><span>Run</span></>:<Loader/>}</button>
                         </div>
                         
                         <div className='flex-1 min-h-0 pt-4'>
@@ -453,10 +476,10 @@ const Room = () => {
                                 </textarea>
 
                                 <div className='flex flex-col grow gap-1'>
-                                    <textarea value={codeOutput} placeholder='Output : current version has limited credits' readOnly className='outline-none read-only:text-zinc-500 border grow text-zinc-300 resize-none rounded-lg border-zinc-600 p-2'>
+                                    <textarea value={codeOutput} placeholder='Output : current version has limited credits' readOnly className='outline-none text-md read-only:text-zinc-500 border grow text-zinc-300 resize-none rounded-lg border-zinc-600 p-2'>
                                     </textarea>
 
-                                    <textarea readOnly className='outline-none read-only:text-zinc-500 border scrollbar-none text-zinc-300 resize-none rounded-lg border-zinc-600 p-2' placeholder='code errors / remaining credits shown here' value={codeErrors}></textarea>                                    
+                                    <textarea readOnly className='outline-none text-xs read-only:text-zinc-500 border scrollbar-none text-zinc-300 resize-none rounded-lg border-zinc-600 p-2' placeholder='code errors / remaining credits shown here' value={codeErrors}></textarea>                                    
                                 </div>
                             </div>                       
                         </Panel>
