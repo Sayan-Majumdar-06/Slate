@@ -34,7 +34,6 @@ const Create = () => {
   
   return (
     <div className="min-w-screen min-h-screen flex items-center justify-center bg-zinc-900 geomini">
-      <Toaster/>
       <div className="py-16 px-20 border border-zinc-600 rounded-xl flex flex-col gap-8 items-center justify-around bg-zinc-800">
         <div className='flex flex-col gap-2'>
           <h2 className='text-zinc-300 font-medium text-2xl'>
