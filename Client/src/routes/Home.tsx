@@ -13,7 +13,7 @@ export default function Home() {
   const [username, setUsername] = useState("");
   const [isRoomCreateActive, setIsRoomCreateActive] = useState(true);
 
-  const SERVER_URL = import.meta.env.SERVER_URL;
+  const SERVER_URL = import.meta.env.VITE_SERVER_URL;
 
   const createRoom = async () => {
     setIsRoomCreateActive(false);

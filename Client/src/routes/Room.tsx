@@ -34,7 +34,7 @@ const Room = () => {
         username: string;
     }
 
-    const SERVER_URL = import.meta.env.SERVER_URL;
+    const SERVER_URL = import.meta.env.VITE_SERVER_URL;
     
     const [users, setUsers] = useState<User[]>([]);
     const [code, setCode] = useState("// code here");
