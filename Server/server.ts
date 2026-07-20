@@ -14,7 +14,7 @@ const server = createServer(app);
 
 app.use(
     cors({
-        origin: "http://localhost:5173",
+        origin: process.env.VITE_FRONTEND_URL,
     })
 );
 
@@ -67,7 +67,7 @@ app.post("/run-code", async(req, res) => {
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: process.env.VITE_FRONTEND_URL,
   },
 });
 

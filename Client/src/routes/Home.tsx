@@ -13,13 +13,15 @@ export default function Home() {
   const [username, setUsername] = useState("");
   const [isRoomCreateActive, setIsRoomCreateActive] = useState(true);
 
+  const SERVER_URL = import.meta.env.SERVER_URL;
+
   const createRoom = async () => {
     setIsRoomCreateActive(false);
     const hostToken = crypto.randomUUID();
 
     sessionStorage.setItem("hostToken", hostToken);
 
-    const response = await fetch("http://localhost:3000/rooms", {
+    const response = await fetch(`${SERVER_URL}/rooms`, {
       method: "POST",
       headers: {
         "Content-type": "application/json",

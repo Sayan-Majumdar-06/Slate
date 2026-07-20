@@ -33,6 +33,8 @@ const Room = () => {
         id: string;
         username: string;
     }
+
+    const SERVER_URL = import.meta.env.SERVER_URL;
     
     const [users, setUsers] = useState<User[]>([]);
     const [code, setCode] = useState("// code here");
@@ -192,7 +194,7 @@ const Room = () => {
         const initializeRoom = async () => {
             try {
                 const response = await axios.get(
-                    `http://localhost:3000/room/${roomId}`
+                    `${SERVER_URL}/room/${roomId}`
                 );
 
                 if (cancelled) return;
@@ -306,7 +308,7 @@ const Room = () => {
             "stdin": codeInput,
         }
 
-        const response = await axios.post("http://localhost:3000/run-code", exeData);
+        const response = await axios.post(`${SERVER_URL}/run-code`, exeData);
 
         setCodeOutput(response.data.stdout);
         setCodeErrors(response.data.stderr || response.data.creditsRemaining);
