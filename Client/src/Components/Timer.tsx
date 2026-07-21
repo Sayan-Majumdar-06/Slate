@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import type { Socket } from 'socket.io-client';
 
 // Assuming you have your socket instance and roomId available via context or props
-const TimerComponent = ({ socket, roomId }) => {
+const TimerComponent = ({ socket }: {socket: Socket}) => {
   const [timeLeft, setTimeLeft] = useState(0); // In seconds
-  const [isPaused, setIsPaused] = useState(false);
-  const intervalRef = useRef(null);
-  const endTimeRef = useRef(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const endTimeRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!socket) return;
@@ -13,8 +13,7 @@ const TimerComponent = ({ socket, roomId }) => {
     socket.on("timer-updated", (timerState) => {
       const { endTime, remainingTime, isPaused: backendPaused } = timerState;
       
-      setIsPaused(backendPaused);
-      clearInterval(intervalRef.current);
+      clearInterval(intervalRef.current ?? undefined);
 
       if (backendPaused && remainingTime !== null) {
         setTimeLeft(Math.ceil(remainingTime / 1000));
@@ -22,9 +21,9 @@ const TimerComponent = ({ socket, roomId }) => {
         endTimeRef.current = endTime;
 
         const calculateRemaining = () => {
-          const diff = endTimeRef.current - Date.now();
+          const diff = endTimeRef.current! - Date.now();
           if (diff <= 0) {
-            clearInterval(intervalRef.current);
+            clearInterval(intervalRef.current ?? undefined);
             setTimeLeft(0);
           } else {
             setTimeLeft(Math.ceil(diff / 1000));
@@ -41,7 +40,7 @@ const TimerComponent = ({ socket, roomId }) => {
 
     return () => {
       socket.off("timer-updated");
-      clearInterval(intervalRef.current);
+      clearInterval(intervalRef.current ?? undefined);
     };
   }, [socket]);
 

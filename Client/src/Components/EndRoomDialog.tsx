@@ -1,5 +1,3 @@
-import React from 'react'
-import { useState } from 'react';
 import { socket } from '../socket/socket';
 
 type EndRoomDialogProps = {

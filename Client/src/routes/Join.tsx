@@ -1,15 +1,14 @@
-import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router';
 import { useState } from 'react';
 
-const Join = ({username}) => {
+const Join = ({username}:{username:string}) => {
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     setDisable(true);
     e.preventDefault();
 
-    const form = e.target;
+    const form = e.currentTarget;
     const formData = new FormData(form);
     const roomId = formData.get("link");
     navigate(`/room/${roomId}`, { state: { username: username } });

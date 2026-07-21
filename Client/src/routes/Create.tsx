@@ -2,7 +2,7 @@ import { useNavigate, useParams } from 'react-router';
 import { useLocation } from 'react-router';
 import { useEffect, useState } from 'react';
 import { CircleCheck } from 'lucide-react';
-import toast, { Toaster } from 'react-hot-toast'
+import toast from 'react-hot-toast'
 const Create = () => {
 
   const navigate = useNavigate();

@@ -1,8 +1,6 @@
 import { useNavigate } from "react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Join from "./Join";
-import { socket } from "../socket/socket";
-import toast from "react-hot-toast";
 import { Loader } from "lucide-react";
 import { FaGithub, FaLinkedin } from "react-icons/fa";
 import { MdEmail } from "react-icons/md";

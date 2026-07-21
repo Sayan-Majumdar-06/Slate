@@ -10,11 +10,11 @@ import AddProblemModal from '../Components/AddProblemModal';
 import "@excalidraw/excalidraw/index.css";
 import EndRoomDialog from '../Components/EndRoomDialog';
 import { useNavigate } from 'react-router';
-import { CirclePlus, Crown, Loader, MonitorX, Pause, Play, Presentation, Save, Square } from 'lucide-react';
+import { CirclePlus, Loader, MonitorX, Pause, Play, Presentation, Save, Square } from 'lucide-react';
 import TimerComponent from '../Components/Timer';
 import JSZip from "jszip";
 import axios from 'axios';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 const Room = () => {
 
@@ -189,7 +189,7 @@ const Room = () => {
     // Initialise room listeners
     useEffect(() => {
 
-        let cancelled = false;
+        const cancelled = false;
 
         const initializeRoom = async () => {
             try {
@@ -451,7 +451,7 @@ const Room = () => {
                         </div>
                         
                         <div className='flex-1 min-h-0 pt-4'>
-                            <Editor height='100%' width='100%' defaultLanguage={language} theme='vs-dark' value={code} onChange={(value) => onCodeChange(value)}/>
+                            <Editor height='100%' width='100%' defaultLanguage={language} theme='vs-dark' value={code} onChange={(value) => onCodeChange(value ?? "")}/>
                         </div>
                         </Panel>
 
