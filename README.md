@@ -22,8 +22,14 @@ Slate gives interviewers and candidates a shared workspace for remote technical 
 ---
 
 ## Screenshots
+- Home
+<img src="/docs/images/Home.png" width="1900" height="907" alt="Image"/>
 
+- Interview Room
+<img src="/docs/images/Room.png"  width="1900" height="907" alt="Image"/>
 
+- Whiteboard
+<img src="/docs/images/Whiteboard-sync.png"  width="1900" height="907" alt="Image"/>
 
 ---
 
@@ -41,7 +47,7 @@ Slate gives interviewers and candidates a shared workspace for remote technical 
 
 ### Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 22.12.0+ and npm
 - A OneCompiler API key ([get one here](https://onecompiler.com/))
 
 ### 1. Clone the repository
