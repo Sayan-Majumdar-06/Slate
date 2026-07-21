@@ -391,7 +391,7 @@ const Room = () => {
             </div>
 
             <div className=' px-2 py-1 text-sm text-zinc-50 rounded-xl flex gap-2 items-center justify-center'>
-                <TimerComponent socket={socket} roomId={roomId}/>
+                <TimerComponent socket={socket}/>
 
                 {isInterviewer && <div className='flex items-center gap-1'>
                     <button className='p-1 rounded-lg bg-zinc-700/60 hover:bg-zinc-800 transition-colors duration-150' onClick={()=>handleStart(1800)}><Play size="1.2rem" color='gray'/></button>
